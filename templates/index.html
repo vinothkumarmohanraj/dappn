@@ -4,202 +4,231 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Simple Bank</title>
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js@1.3.6/dist/web3.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
-            background-color: #f4f4f4;
-            color: #333;
-            padding: 20px;
+            margin: 20px;
+            padding: 0;
+            background-color: #f5f5f5;
         }
-        .container {
-            max-width: 600px;
-            margin: 0 auto;
-            background-color: #fff;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-        }
+
         h1 {
             text-align: center;
             color: #333;
         }
-        .form-group {
-            margin-bottom: 15px;
+
+        .container {
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+
+        form {
+            margin-bottom: 20px;
+        }
+
         label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
         }
-        input[type="text"], input[type="number"], input[type="submit"] {
+
+        input[type="text"] {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
         }
-        input[type="submit"] {
-            background-color: #28a745;
-            color: #fff;
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: #007bff;
+            color: white;
             border: none;
+            border-radius: 5px;
+            font-size: 16px;
             cursor: pointer;
         }
-        input[type="submit"]:hover {
-            background-color: #218838;
+
+        button:hover {
+            background-color: #0056b3;
         }
-        .result {
-            margin-top: 20px;
-            padding: 15px;
-            background-color: #e9ecef;
-            border: 1px solid #ced4da;
-            border-radius: 4px;
+
+        .balance {
+            font-size: 18px;
+            font-weight: bold;
+            color: #007bff;
         }
     </style>
-    <script src="https://cdn.jsdelivr.net/npm/web3@1.6.1/dist/web3.min.js"></script>
 </head>
 <body>
+    <h1>Simple Bank</h1>
     <div class="container">
-        <h1>Simple Bank</h1>
+        <form id="depositForm">
+            <label for="depositAmount">Deposit Amount (in Ether):</label>
+            <input type="text" id="depositAmount" required>
+            <button type="submit">Deposit</button>
+        </form>
 
-        <div class="form-group">
-            <label for="depositAmount">Deposit Amount (ETH):</label>
-            <input type="number" id="depositAmount" step="0.01">
-            <input type="submit" value="Deposit" onclick="deposit()">
-        </div>
+        <form id="withdrawForm">
+            <label for="withdrawAmount">Withdraw Amount (in Ether):</label>
+            <input type="text" id="withdrawAmount" required>
+            <button type="submit">Withdraw</button>
+        </form>
 
-        <div class="form-group">
-            <label for="withdrawAmount">Withdraw Amount (ETH):</label>
-            <input type="number" id="withdrawAmount" step="0.01">
-            <input type="submit" value="Withdraw" onclick="withdraw()">
-        </div>
-
-        <div class="form-group">
-            <label for="transferAmount">Transfer Amount (ETH):</label>
-            <input type="number" id="transferAmount" step="0.01">
-        </div>
-
-        <div class="form-group">
-            <label for="transferAddress">Recipient Address:</label>
-            <input type="text" id="transferAddress">
-            <input type="submit" value="Transfer" onclick="transfer()">
-        </div>
-
-        <div class="form-group">
-            <input type="submit" value="Check Balance" onclick="getBalance()">
-        </div>
-
-        <div class="result" id="result"></div>
+        <button id="checkBalanceButton">Check Balance</button>
+        <p id="balance" class="balance"></p>
     </div>
 
     <script>
-        let web3 = new Web3(Web3.givenProvider);
-        let contractAddress = "0x19384463415dfc5316b0840ba7ed59e37ce1c9a2";
-        let abi = 
+        // Ensure Web3 is connected to the Ethereum provider (MetaMask)
+        const web3 = new Web3(Web3.givenProvider);
 
-
-
-                [
+        // ABI for the SimpleBank contract
+        const contractABI = [
+            {
+                "inputs": [],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "inputs": [
                     {
-                        "inputs": [],
-                        "name": "deposit",
-                        "outputs": [],
-                        "stateMutability": "payable",
-                        "type": "function"
-                    },
-                    {
-                        "inputs": [
-                            {
-                                "internalType": "address",
-                                "name": "_to",
-                                "type": "address"
-                            },
-                            {
-                                "internalType": "uint256",
-                                "name": "_amount",
-                                "type": "uint256"
-                            }
-                        ],
-                        "name": "transfer",
-                        "outputs": [],
-                        "stateMutability": "nonpayable",
-                        "type": "function"
-                    },
-                    {
-                        "inputs": [
-                            {
-                                "internalType": "uint256",
-                                "name": "_amount",
-                                "type": "uint256"
-                            }
-                        ],
-                        "name": "withdraw",
-                        "outputs": [],
-                        "stateMutability": "nonpayable",
-                        "type": "function"
-                    },
-                    {
-                        "inputs": [],
-                        "name": "getBalance",
-                        "outputs": [
-                            {
-                                "internalType": "uint256",
-                                "name": "",
-                                "type": "uint256"
-                            }
-                        ],
-                        "stateMutability": "view",
-                        "type": "function"
+                        "internalType": "uint256",
+                        "name": "_amount",
+                        "type": "uint256"
                     }
-                    ];
+                ],
+                "name": "withdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "inputs": [],
+                "name": "getBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Deposit",
+                "type": "event"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Withdrawal",
+                "type": "event"
+            }
+        ];
 
-        let contract = new web3.eth.Contract(abi, contractAddress);
+        // Replace this with your deployed contract address
+        const contractAddress = "0x64559867eb3b722b9169b322893eb1f624e35550";
 
-        async function deposit() {
-            let accounts = await web3.eth.getAccounts();
-            let amount = document.getElementById("depositAmount").value;
-            contract.methods.deposit().send({ from: accounts[0], value: web3.utils.toWei(amount, "ether") })
-                .then(() => {
-                    document.getElementById("result").innerText = "Deposit successful!";
-                })
-                .catch((err) => {
-                    document.getElementById("result").innerText = "Error: " + err.message;
-                });
-        }
+        // Create a contract instance
+        const simpleBank = new web3.eth.Contract(contractABI, contractAddress);
 
-        async function withdraw() {
-            let accounts = await web3.eth.getAccounts();
-            let amount = document.getElementById("withdrawAmount").value;
-            contract.methods.withdraw(web3.utils.toWei(amount, "ether")).send({ from: accounts[0] })
-                .then(() => {
-                    document.getElementById("result").innerText = "Withdrawal successful!";
-                })
-                .catch((err) => {
-                    document.getElementById("result").innerText = "Error: " + err.message;
-                });
-        }
+        // Handle deposit form submission
+        document.getElementById("depositForm").onsubmit = async (event) => {
+            event.preventDefault();
+            const depositAmount = document.getElementById("depositAmount").value;
+            const accounts = await web3.eth.requestAccounts();
+            const sender = accounts[0];
 
-        async function transfer() {
-            let accounts = await web3.eth.getAccounts();
-            let amount = document.getElementById("transferAmount").value;
-            let to = document.getElementById("transferAddress").value;
-            contract.methods.transfer(to, web3.utils.toWei(amount, "ether")).send({ from: accounts[0] })
-                .then(() => {
-                    document.getElementById("result").innerText = "Transfer successful!";
-                })
-                .catch((err) => {
-                    document.getElementById("result").innerText = "Error: " + err.message;
-                });
-        }
+            // Convert deposit amount to Wei
+            const amountInWei = web3.utils.toWei(depositAmount, "ether");
 
-        async function getBalance() {
-            let accounts = await web3.eth.getAccounts();
-            contract.methods.getBalance().call({ from: accounts[0] })
-                .then((balance) => {
-                    document.getElementById("result").innerText = "Your balance: " + web3.utils.fromWei(balance, "ether") + " ETH";
-                })
-                .catch((err) => {
-                    document.getElementById("result").innerText = "Error: " + err.message;
-                });
-        }
+            // Call the deposit function
+            simpleBank.methods.deposit().send({
+                from: sender,
+                value: amountInWei
+            }).then((receipt) => {
+                alert("Deposit successful");
+            }).catch((error) => {
+                console.error(error);
+                alert("Deposit failed");
+            });
+        };
+
+        // Handle withdraw form submission
+        document.getElementById("withdrawForm").onsubmit = async (event) => {
+            event.preventDefault();
+            const withdrawAmount = document.getElementById("withdrawAmount").value;
+            const accounts = await web3.eth.requestAccounts();
+            const sender = accounts[0];
+
+            // Convert withdraw amount to Wei
+            const amountInWei = web3.utils.toWei(withdrawAmount, "ether");
+
+            // Call the withdraw function
+            simpleBank.methods.withdraw(amountInWei).send({
+                from: sender
+            }).then((receipt) => {
+                alert("Withdrawal successful");
+            }).catch((error) => {
+                console.error(error);
+                alert("Withdrawal failed");
+            });
+        };
+
+        // Handle check balance button click
+        document.getElementById("checkBalanceButton").onclick = async () => {
+            const accounts = await web3.eth.requestAccounts();
+            const sender = accounts[0];
+
+            // Call the getBalance function
+            const balanceInWei = await simpleBank.methods.getBalance().call({
+                from: sender
+            });
+
+            // Convert balance from Wei to Ether
+            const balanceInEther = web3.utils.fromWei(balanceInWei, "ether");
+            document.getElementById("balance").innerText = `Balance: ${balanceInEther} Ether`;
+        };
     </script>
 </body>
 </html>
