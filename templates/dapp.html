@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simple Bank</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            padding: 20px;
+            background-image: url('https://wallpapercave.com/wp/wp9764014.jpg'); /* Add your background image here */
+            background-size: cover;
+            background-position: center;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+
+        button {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            background-color: navy; /* Different button color */
+            color: white;
+            border: none;
+            cursor: pointer;
+            border-radius: 5px;
+            font-size: 16px; /* Larger font size for buttons */
+        }
+
+        button:hover {
+            background-color: black;
+        }
+
+        input[type="number"],
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+
+        .balance {
+            margin-top: 20px;
+            font-size: 1.2em;
+            text-align: center;
+        }
+        .top-right {
+            position: absolute;
+            top: 10px;
+            left: 20px;
+            font-size: 16px;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <div class="top-right">
+       <h2> Welcome, {{ username }}! </h2>
+        
+    </div>
+    <div class="container">
+        <h1>DAPP Bank</h1>
+        <button id="connectWallet">Connect Wallet</button>
+
+        <h2>Deposit Ether</h2>
+        <input type="number" id="depositAmount" placeholder="Amount in Ether">
+        <button id="depositBtn">Deposit</button>
+
+        <h2>Withdraw Ether</h2>
+        <input type="number" id="withdrawAmount" placeholder="Amount in Ether">
+        <button id="withdrawBtn">Withdraw</button>
+
+        <h2>Transfer Ether</h2>
+        <input type="text" id="transferTo" placeholder="Recipient address">
+        <input type="number" id="transferAmount" placeholder="Amount in Ether">
+        <button id="transferBtn">Transfer</button>
+
+        <div class="balance">
+            <h3>Your Balance: <span id="balance">0</span> ETH</h3>
+            <a href="{{ url_for('logout') }}" class="logout">Logout</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/gh/ethereum/web3.js/dist/web3.min.js"></script>
+    <script>
+        let web3;
+        let simpleBankContract;
+        let account;
+
+        const contractAddress = '0x65bfb85cd26bc94cc1a0e05908384fbe85dabe87';
+        const contractABI = [
+            {
+                "inputs": [],
+                "name": "deposit",
+                "outputs": [],
+                "stateMutability": "payable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Deposit",
+                "type": "event"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "address",
+                        "name": "_to",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "_amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "transfer",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "from",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "to",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Transfer",
+                "type": "event"
+            },
+            {
+                "inputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "_amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "withdraw",
+                "outputs": [],
+                "stateMutability": "nonpayable",
+                "type": "function"
+            },
+            {
+                "anonymous": false,
+                "inputs": [
+                    {
+                        "indexed": true,
+                        "internalType": "address",
+                        "name": "account",
+                        "type": "address"
+                    },
+                    {
+                        "indexed": false,
+                        "internalType": "uint256",
+                        "name": "amount",
+                        "type": "uint256"
+                    }
+                ],
+                "name": "Withdrawal",
+                "type": "event"
+            },
+            {
+                "inputs": [],
+                "name": "getBalance",
+                "outputs": [
+                    {
+                        "internalType": "uint256",
+                        "name": "",
+                        "type": "uint256"
+                    }
+                ],
+                "stateMutability": "view",
+                "type": "function"
+            }
+        ];
+
+        
+        document.getElementById('connectWallet').addEventListener('click', async () => {
+            if (window.ethereum) {
+                web3 = new Web3(window.ethereum);
+                await ethereum.request({ method: 'eth_requestAccounts' });
+                const accounts = await web3.eth.getAccounts();
+                account = accounts[0];
+                simpleBankContract = new web3.eth.Contract(contractABI, contractAddress);
+                alert('Wallet connected: ' + account);
+                updateBalance();
+            } else {
+                alert('Please install MetaMask!');
+            }
+        });
+
+    
+        document.getElementById('depositBtn').addEventListener('click', async () => {
+            const amount = document.getElementById('depositAmount').value;
+            if (amount > 0) {
+                await simpleBankContract.methods.deposit().send({ from: account, value: web3.utils.toWei(amount, 'ether') });
+                updateBalance();
+            } else {
+                alert('Please enter a valid amount.');
+            }
+        });
+
+        document.getElementById('withdrawBtn').addEventListener('click', async () => {
+            const amount = document.getElementById('withdrawAmount').value;
+            if (amount > 0) {
+                await simpleBankContract.methods.withdraw(web3.utils.toWei(amount, 'ether')).send({ from: account });
+                updateBalance();
+            } else {
+                alert('Please enter a valid amount.');
+            }
+        });
+
+        
+        document.getElementById('transferBtn').addEventListener('click', async () => {
+            const toAddress = document.getElementById('transferTo').value;
+            const amount = document.getElementById('transferAmount').value;
+            if (toAddress && amount > 0) {
+                await simpleBankContract.methods.transfer(toAddress, web3.utils.toWei(amount, 'ether')).send({ from: account });
+                updateBalance();
+            } else {
+                alert('Please enter valid recipient and amount.');
+            }
+        });
+
+        // Update balance
+        async function updateBalance() {
+            const balance = await simpleBankContract.methods.getBalance().call({ from: account });
+            document.getElementById('balance').textContent = web3.utils.fromWei(balance, 'ether');
+        }
+    </script>
+</body>
+</html>
